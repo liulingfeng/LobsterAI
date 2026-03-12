@@ -7,14 +7,14 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import type {
   IMGatewayConfig,
   IMGatewayStatus,
-  DingTalkConfig,
+  DingTalkOpenClawConfig,
   FeishuOpenClawConfig,
   TelegramOpenClawConfig,
-  QQConfig,
+  QQOpenClawConfig,
   DiscordOpenClawConfig,
   NimConfig,
   XiaomifengConfig,
-  WecomConfig,
+  WecomOpenClawConfig,
   IMSettings,
 } from '../../types/im';
 import {
@@ -43,7 +43,7 @@ const imSlice = createSlice({
     setConfig: (state, action: PayloadAction<IMGatewayConfig>) => {
       state.config = action.payload;
     },
-    setDingTalkConfig: (state, action: PayloadAction<Partial<DingTalkConfig>>) => {
+    setDingTalkConfig: (state, action: PayloadAction<Partial<DingTalkOpenClawConfig>>) => {
       state.config.dingtalk = { ...state.config.dingtalk, ...action.payload };
     },
     setFeishuConfig: (state, action: PayloadAction<Partial<FeishuOpenClawConfig>>) => {
@@ -55,7 +55,7 @@ const imSlice = createSlice({
         ...action.payload,
       };
     },
-    setQQConfig: (state, action: PayloadAction<Partial<QQConfig>>) => {
+    setQQConfig: (state, action: PayloadAction<Partial<QQOpenClawConfig>>) => {
       state.config.qq = { ...state.config.qq, ...action.payload };
     },
     setDiscordConfig: (state, action: PayloadAction<Partial<DiscordOpenClawConfig>>) => {
@@ -67,7 +67,7 @@ const imSlice = createSlice({
     setXiaomifengConfig: (state, action: PayloadAction<Partial<XiaomifengConfig>>) => {
       state.config.xiaomifeng = { ...state.config.xiaomifeng, ...action.payload };
     },
-    setWecomConfig: (state, action: PayloadAction<Partial<WecomConfig>>) => {
+    setWecomConfig: (state, action: PayloadAction<Partial<WecomOpenClawConfig>>) => {
       state.config.wecom = { ...state.config.wecom, ...action.payload };
     },
     setIMSettings: (state, action: PayloadAction<Partial<IMSettings>>) => {

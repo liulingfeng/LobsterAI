@@ -3,7 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import type { CoworkConfig, CoworkExecutionMode } from '../coworkStore';
 import type { TelegramOpenClawConfig, DiscordOpenClawConfig } from '../im/types';
-import type { DingTalkConfig, FeishuOpenClawConfig, QQConfig, WecomConfig } from '../im/types';
+import type { DingTalkOpenClawConfig, FeishuOpenClawConfig, QQOpenClawConfig, WecomOpenClawConfig } from '../im/types';
 import { resolveRawApiConfig } from './claudeSettings';
 import type { OpenClawEngineManager } from './openclawEngineManager';
 
@@ -54,10 +54,10 @@ type OpenClawConfigSyncDeps = {
   getCoworkConfig: () => CoworkConfig;
   getTelegramOpenClawConfig?: () => TelegramOpenClawConfig | null;
   getDiscordOpenClawConfig?: () => DiscordOpenClawConfig | null;
-  getDingTalkConfig: () => DingTalkConfig | null;
+  getDingTalkConfig: () => DingTalkOpenClawConfig | null;
   getFeishuConfig: () => FeishuOpenClawConfig | null;
-  getQQConfig: () => QQConfig | null;
-  getWecomConfig: () => WecomConfig | null;
+  getQQConfig: () => QQOpenClawConfig | null;
+  getWecomConfig: () => WecomOpenClawConfig | null;
 };
 
 export class OpenClawConfigSync {
@@ -65,10 +65,10 @@ export class OpenClawConfigSync {
   private readonly getCoworkConfig: () => CoworkConfig;
   private readonly getTelegramOpenClawConfig?: () => TelegramOpenClawConfig | null;
   private readonly getDiscordOpenClawConfig?: () => DiscordOpenClawConfig | null;
-  private readonly getDingTalkConfig: () => DingTalkConfig | null;
+  private readonly getDingTalkConfig: () => DingTalkOpenClawConfig | null;
   private readonly getFeishuConfig: () => FeishuOpenClawConfig | null;
-  private readonly getQQConfig: () => QQConfig | null;
-  private readonly getWecomConfig: () => WecomConfig | null;
+  private readonly getQQConfig: () => QQOpenClawConfig | null;
+  private readonly getWecomConfig: () => WecomOpenClawConfig | null;
 
   constructor(deps: OpenClawConfigSyncDeps) {
     this.engineManager = deps.engineManager;
@@ -113,22 +113,18 @@ export class OpenClawConfigSync {
     const preinstalledPluginIds = readPreinstalledPluginIds();
 
     const dingTalkConfig = this.getDingTalkConfig();
-    const hasDingTalk = dingTalkConfig?.enabled && dingTalkConfig.clientId;
-    const gatewayToken = hasDingTalk
-      ? this.engineManager.getGatewayConnectionInfo().token || ''
-      : '';
+    // DingTalk runs through OpenClaw plugin but still needs the gateway HTTP endpoint (chatCompletions)
+    const hasDingTalkOpenClaw = !!(dingTalkConfig?.enabled && dingTalkConfig.clientId);
 
     const feishuConfig = this.getFeishuConfig();
     // Feishu now runs fully through OpenClaw plugin, handled separately below like Telegram
     const hasFeishu = false; // Legacy in-line feishu channel disabled; OpenClaw plugin used instead
 
     const qqConfig = this.getQQConfig();
-    const hasQQ = qqConfig?.enabled && qqConfig.appId;
 
     const wecomConfig = this.getWecomConfig();
-    const hasWecom = wecomConfig?.enabled && wecomConfig.botId;
 
-    const hasAnyChannel = hasDingTalk || hasQQ || hasWecom;
+    const hasAnyChannel = hasDingTalkOpenClaw;
 
     const managedConfig: Record<string, unknown> = {
       gateway: {
@@ -189,55 +185,6 @@ export class OpenClawConfigSync {
             },
           }
         : {}),
-      ...(hasDingTalk ? {
-        channels: {
-          'dingtalk-connector': {
-            enabled: true,
-            clientId: dingTalkConfig.clientId,
-            clientSecret: dingTalkConfig.clientSecret,
-            ...(gatewayToken ? { gatewayToken } : {}),
-          },
-          ...(hasQQ ? {
-            qqbot: {
-              enabled: true,
-              appId: qqConfig.appId,
-              clientSecret: qqConfig.appSecret,
-            },
-          } : {}),
-          ...(hasWecom ? {
-            wecom: {
-              enabled: true,
-              botId: wecomConfig.botId,
-              secret: wecomConfig.secret,
-              dmPolicy: 'open',
-            },
-          } : {}),
-        },
-      } : hasQQ ? {
-        channels: {
-          qqbot: {
-            enabled: true,
-            appId: qqConfig.appId,
-            clientSecret: qqConfig.appSecret,
-          },
-          ...(hasWecom ? {
-            wecom: {
-              enabled: true,
-              botId: wecomConfig.botId,
-              secret: wecomConfig.secret,
-              dmPolicy: 'open',
-            },
-          } : {}),
-        },
-      } : hasWecom ? {
-        channels: {
-          wecom: {
-            enabled: true,
-            botId: wecomConfig.botId,
-            secret: wecomConfig.secret,
-          },
-        },
-      } : {}),
     };
 
     // Sync Telegram OpenClaw channel config
@@ -246,7 +193,7 @@ export class OpenClawConfigSync {
       const telegramChannel: Record<string, unknown> = {
         enabled: true,
         botToken: tgConfig.botToken,
-        dmPolicy: tgConfig.dmPolicy || 'pairing',
+        dmPolicy: tgConfig.dmPolicy || 'open',
         allowFrom: (() => {
           const ids = tgConfig.allowFrom?.length ? [...tgConfig.allowFrom] : [];
           if (tgConfig.dmPolicy === 'open' && !ids.includes('*')) ids.push('*');
@@ -288,7 +235,7 @@ export class OpenClawConfigSync {
         enabled: true,
         token: dcConfig.botToken,
         dm: {
-          policy: dcConfig.dmPolicy || 'pairing',
+          policy: dcConfig.dmPolicy || 'open',
           allowFrom: (() => {
             const ids = dcConfig.allowFrom?.length ? [...dcConfig.allowFrom] : [];
             if (dcConfig.dmPolicy === 'open' && !ids.includes('*')) ids.push('*');
@@ -337,7 +284,7 @@ export class OpenClawConfigSync {
         appId: feishuConfig.appId,
         appSecret: feishuConfig.appSecret,
         domain: feishuConfig.domain || 'feishu',
-        dmPolicy: feishuConfig.dmPolicy || 'pairing',
+        dmPolicy: feishuConfig.dmPolicy || 'open',
         allowFrom: (() => {
           const ids = feishuConfig.allowFrom?.length ? [...feishuConfig.allowFrom] : [];
           if (feishuConfig.dmPolicy === 'open' && !ids.includes('*')) ids.push('*');
@@ -359,6 +306,82 @@ export class OpenClawConfigSync {
       managedConfig.channels = { ...(managedConfig.channels as Record<string, unknown> || {}), feishu: feishuChannel };
     } else if (feishuConfig) {
       managedConfig.channels = { ...(managedConfig.channels as Record<string, unknown> || {}), feishu: { enabled: false } };
+    }
+
+    // Sync DingTalk OpenClaw channel config (via dingtalk-connector plugin)
+    if (dingTalkConfig?.enabled && dingTalkConfig.clientId) {
+      const gatewayToken = this.engineManager.getGatewayToken();
+      const dingtalkChannel: Record<string, unknown> = {
+        enabled: true,
+        clientId: dingTalkConfig.clientId,
+        clientSecret: dingTalkConfig.clientSecret,
+        dmPolicy: dingTalkConfig.dmPolicy || 'open',
+        allowFrom: (() => {
+          const ids = dingTalkConfig.allowFrom?.length ? [...dingTalkConfig.allowFrom] : [];
+          if (dingTalkConfig.dmPolicy === 'open' && !ids.includes('*')) ids.push('*');
+          return ids;
+        })(),
+        groupPolicy: dingTalkConfig.groupPolicy || 'open',
+        sessionTimeout: dingTalkConfig.sessionTimeout ?? 1800000,
+        ...(gatewayToken ? { gatewayToken } : {}),
+      };
+      managedConfig.channels = { ...(managedConfig.channels as Record<string, unknown> || {}), 'dingtalk-connector': dingtalkChannel };
+    } else if (dingTalkConfig) {
+      managedConfig.channels = { ...(managedConfig.channels as Record<string, unknown> || {}), 'dingtalk-connector': { enabled: false } };
+    }
+
+    // Sync QQ OpenClaw channel config (via qqbot plugin)
+    if (qqConfig?.enabled && qqConfig.appId) {
+      const qqChannel: Record<string, unknown> = {
+        enabled: true,
+        appId: qqConfig.appId,
+        clientSecret: qqConfig.appSecret,
+        dmPolicy: qqConfig.dmPolicy || 'open',
+        allowFrom: (() => {
+          const ids = qqConfig.allowFrom?.length ? [...qqConfig.allowFrom] : [];
+          if (qqConfig.dmPolicy === 'open' && !ids.includes('*')) ids.push('*');
+          return ids;
+        })(),
+        groupPolicy: qqConfig.groupPolicy || 'open',
+        groupAllowFrom: (() => {
+          const ids = qqConfig.groupAllowFrom?.length ? [...qqConfig.groupAllowFrom] : [];
+          if (qqConfig.groupPolicy === 'open' && !ids.includes('*')) ids.push('*');
+          return ids;
+        })(),
+        historyLimit: qqConfig.historyLimit || 50,
+        markdownSupport: qqConfig.markdownSupport ?? true,
+      };
+      if (qqConfig.imageServerBaseUrl) {
+        qqChannel.imageServerBaseUrl = qqConfig.imageServerBaseUrl;
+      }
+      managedConfig.channels = { ...(managedConfig.channels as Record<string, unknown> || {}), qqbot: qqChannel };
+    } else if (qqConfig) {
+      managedConfig.channels = { ...(managedConfig.channels as Record<string, unknown> || {}), qqbot: { enabled: false } };
+    }
+
+    // Sync WeCom OpenClaw channel config (via wecom-openclaw-plugin)
+    if (wecomConfig?.enabled && wecomConfig.botId) {
+      const wecomChannel: Record<string, unknown> = {
+        enabled: true,
+        botId: wecomConfig.botId,
+        secret: wecomConfig.secret,
+        dmPolicy: wecomConfig.dmPolicy || 'open',
+        allowFrom: (() => {
+          const ids = wecomConfig.allowFrom?.length ? [...wecomConfig.allowFrom] : [];
+          if (wecomConfig.dmPolicy === 'open' && !ids.includes('*')) ids.push('*');
+          return ids;
+        })(),
+        groupPolicy: wecomConfig.groupPolicy || 'open',
+        groupAllowFrom: (() => {
+          const ids = wecomConfig.groupAllowFrom?.length ? [...wecomConfig.groupAllowFrom] : [];
+          if (wecomConfig.groupPolicy === 'open' && !ids.includes('*')) ids.push('*');
+          return ids;
+        })(),
+        sendThinkingMessage: wecomConfig.sendThinkingMessage ?? true,
+      };
+      managedConfig.channels = { ...(managedConfig.channels as Record<string, unknown> || {}), wecom: wecomChannel };
+    } else if (wecomConfig) {
+      managedConfig.channels = { ...(managedConfig.channels as Record<string, unknown> || {}), wecom: { enabled: false } };
     }
 
     const nextContent = `${JSON.stringify(managedConfig, null, 2)}\n`;

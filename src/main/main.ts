@@ -2322,7 +2322,13 @@ if (!gotTheLock) {
 
       // Re-sync OpenClaw config so dingtalk-connector picks up new credentials
       if (config.dingtalk) {
-        void syncOpenClawConfig({ reason: 'im-dingtalk-config-change', restartGatewayIfRunning: false });
+        const engineManager = getOpenClawEngineManager();
+        if (engineManager.getStatus().phase === 'running') {
+          await syncOpenClawConfig({
+            reason: 'dingtalk-openclaw-config-change',
+            restartGatewayIfRunning: true,
+          });
+        }
       }
       // Re-sync OpenClaw config so feishu-openclaw-plugin picks up new credentials
       if (config.feishu) {
@@ -2336,11 +2342,23 @@ if (!gotTheLock) {
       }
       // Re-sync OpenClaw config so qqbot plugin picks up new credentials
       if (config.qq) {
-        void syncOpenClawConfig({ reason: 'im-qq-config-change', restartGatewayIfRunning: false });
+        const engineManager = getOpenClawEngineManager();
+        if (engineManager.getStatus().phase === 'running') {
+          await syncOpenClawConfig({
+            reason: 'im-qq-openclaw-config-change',
+            restartGatewayIfRunning: true,
+          });
+        }
       }
       // Re-sync OpenClaw config so wecom-openclaw-plugin picks up new credentials
       if (config.wecom) {
-        void syncOpenClawConfig({ reason: 'im-wecom-config-change', restartGatewayIfRunning: false });
+        const wecomEngineManager = getOpenClawEngineManager();
+        if (wecomEngineManager.getStatus().phase === 'running') {
+          await syncOpenClawConfig({
+            reason: 'im-wecom-config-change',
+            restartGatewayIfRunning: true,
+          });
+        }
       }
       return { success: true };
     } catch (error) {
@@ -2537,6 +2555,22 @@ if (!gotTheLock) {
     return { success: true, path: result.filePaths[0] };
   });
 
+  ipcMain.handle('dialog:selectFiles', async (event, options?: { title?: string; filters?: { name: string; extensions: string[] }[] }) => {
+    const ownerWindow = BrowserWindow.fromWebContents(event.sender);
+    const dialogOptions = {
+      properties: ['openFile', 'multiSelections'] as ('openFile' | 'multiSelections')[],
+      title: options?.title,
+      filters: options?.filters,
+    };
+    const result = ownerWindow
+      ? await dialog.showOpenDialog(ownerWindow, dialogOptions)
+      : await dialog.showOpenDialog(dialogOptions);
+    if (result.canceled || result.filePaths.length === 0) {
+      return { success: true, paths: [] };
+    }
+    return { success: true, paths: result.filePaths };
+  });
+
   ipcMain.handle(
     'dialog:saveInlineFile',
     async (
@@ -2695,6 +2729,7 @@ if (!gotTheLock) {
     headers: Record<string, string>;
     body?: string;
   }) => {
+    console.log(`[api:fetch] ${options.method} ${options.url}`);
     try {
       const response = await session.defaultSession.fetch(options.url, {
         method: options.method,
@@ -2714,14 +2749,17 @@ if (!gotTheLock) {
         data = await response.text();
       }
 
-      return {
+      const result = {
         ok: response.ok,
         status: response.status,
         statusText: response.statusText,
         headers: Object.fromEntries(response.headers.entries()),
         data,
       };
+      console.log(`[api:fetch] ${options.method} ${options.url} -> ${response.status} ${response.statusText}`, typeof data === 'object' ? JSON.stringify(data) : data);
+      return result;
     } catch (error) {
+      console.error(`[api:fetch] ${options.method} ${options.url} -> ERROR:`, error instanceof Error ? error.message : error);
       return {
         ok: false,
         status: 0,

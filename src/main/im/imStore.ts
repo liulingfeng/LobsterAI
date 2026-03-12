@@ -6,7 +6,7 @@
 import { Database } from 'sql.js';
 import {
   IMGatewayConfig,
-  DingTalkConfig,
+  DingTalkOpenClawConfig,
   FeishuOpenClawConfig,
   TelegramOpenClawConfig,
   QQConfig,
@@ -14,10 +14,11 @@ import {
   NimConfig,
   XiaomifengConfig,
   WecomConfig,
+  WecomOpenClawConfig,
   IMSettings,
   IMPlatform,
   IMSessionMapping,
-  DEFAULT_DINGTALK_CONFIG,
+  DEFAULT_DINGTALK_OPENCLAW_CONFIG,
   DEFAULT_FEISHU_OPENCLAW_CONFIG,
   DEFAULT_TELEGRAM_OPENCLAW_CONFIG,
   DEFAULT_QQ_CONFIG,
@@ -224,6 +225,62 @@ export class IMStore {
       }
     }
 
+    // Migrate old native DingTalk config to new OpenClaw format
+    const oldDingtalkResult = this.db.exec('SELECT value FROM im_config WHERE key = ?', ['dingtalk']);
+    const newDingtalkResult = this.db.exec('SELECT value FROM im_config WHERE key = ?', ['dingtalkOpenClaw']);
+    if (oldDingtalkResult[0]?.values[0] && !newDingtalkResult[0]?.values[0]) {
+      try {
+        const oldConfig = JSON.parse(oldDingtalkResult[0].values[0][0] as string) as Partial<{ enabled: boolean; clientId: string; clientSecret: string; debug: boolean }>;
+        if (oldConfig.clientId) {
+          const newConfig: DingTalkOpenClawConfig = {
+            ...DEFAULT_DINGTALK_OPENCLAW_CONFIG,
+            enabled: oldConfig.enabled ?? false,
+            clientId: oldConfig.clientId,
+            clientSecret: oldConfig.clientSecret ?? '',
+            debug: oldConfig.debug ?? false,
+          };
+          const now = Date.now();
+          this.db.run(
+            'INSERT OR REPLACE INTO im_config (key, value, updated_at) VALUES (?, ?, ?)',
+            ['dingtalkOpenClaw', JSON.stringify(newConfig), now]
+          );
+          this.db.run('DELETE FROM im_config WHERE key = ?', ['dingtalk']);
+          changed = true;
+          console.log('[IMStore] Migrated old DingTalk config to OpenClaw format');
+        }
+      } catch {
+        // Ignore parse errors
+      }
+    }
+
+    // Migrate old native WeCom config to new OpenClaw format
+    const oldWecomResult = this.db.exec('SELECT value FROM im_config WHERE key = ?', ['wecom']);
+    const newWecomResult = this.db.exec('SELECT value FROM im_config WHERE key = ?', ['wecomOpenClaw']);
+    if (oldWecomResult[0]?.values[0] && !newWecomResult[0]?.values[0]) {
+      try {
+        const oldConfig = JSON.parse(oldWecomResult[0].values[0][0] as string) as Partial<{ enabled: boolean; botId: string; secret: string; debug: boolean }>;
+        if (oldConfig.botId) {
+          const newConfig: WecomOpenClawConfig = {
+            ...DEFAULT_WECOM_CONFIG,
+            enabled: oldConfig.enabled ?? false,
+            botId: oldConfig.botId,
+            secret: oldConfig.secret ?? '',
+            debug: oldConfig.debug ?? true,
+          };
+          const now = Date.now();
+          this.db.run(
+            'INSERT OR REPLACE INTO im_config (key, value, updated_at) VALUES (?, ?, ?)',
+            ['wecomOpenClaw', JSON.stringify(newConfig), now]
+          );
+          this.db.run('DELETE FROM im_config WHERE key = ?', ['wecom']);
+          changed = true;
+          console.log('[IMStore] Migrated old WeCom config to OpenClaw format');
+        }
+      } catch {
+        // Ignore parse errors
+      }
+    }
+
     if (changed) {
       this.saveDb();
     }
@@ -258,14 +315,14 @@ export class IMStore {
   // ==================== Full Config Operations ====================
 
   getConfig(): IMGatewayConfig {
-    const dingtalk = this.getConfigValue<DingTalkConfig>('dingtalk') ?? DEFAULT_DINGTALK_CONFIG;
+    const dingtalk = this.getConfigValue<DingTalkOpenClawConfig>('dingtalkOpenClaw') ?? DEFAULT_DINGTALK_OPENCLAW_CONFIG;
     const feishu = this.getConfigValue<FeishuOpenClawConfig>('feishuOpenClaw') ?? DEFAULT_FEISHU_OPENCLAW_CONFIG;
     const telegram = this.getConfigValue<TelegramOpenClawConfig>('telegramOpenClaw') ?? DEFAULT_TELEGRAM_OPENCLAW_CONFIG;
     const discord = this.getConfigValue<DiscordOpenClawConfig>('discordOpenClaw') ?? DEFAULT_DISCORD_OPENCLAW_CONFIG;
     const nim = this.getConfigValue<NimConfig>('nim') ?? DEFAULT_NIM_CONFIG;
     const xiaomifeng = this.getConfigValue<XiaomifengConfig>('xiaomifeng') ?? DEFAULT_XIAOMIFENG_CONFIG;
     const qq = this.getConfigValue<QQConfig>('qq') ?? DEFAULT_QQ_CONFIG;
-    const wecom = this.getConfigValue<WecomConfig>('wecom') ?? DEFAULT_WECOM_CONFIG;
+    const wecom = this.getConfigValue<WecomOpenClawConfig>('wecomOpenClaw') ?? DEFAULT_WECOM_CONFIG;
     const settings = this.getConfigValue<IMSettings>('settings') ?? DEFAULT_IM_SETTINGS;
 
     // Resolve enabled field: default to false for safety
@@ -280,7 +337,7 @@ export class IMStore {
     };
 
     return {
-      dingtalk: resolveEnabled(dingtalk, DEFAULT_DINGTALK_CONFIG),
+      dingtalk: resolveEnabled(dingtalk, DEFAULT_DINGTALK_OPENCLAW_CONFIG),
       feishu: resolveEnabled(feishu, DEFAULT_FEISHU_OPENCLAW_CONFIG),
       telegram: resolveEnabled(telegram, DEFAULT_TELEGRAM_OPENCLAW_CONFIG),
       discord: resolveEnabled(discord, DEFAULT_DISCORD_OPENCLAW_CONFIG),
@@ -294,7 +351,7 @@ export class IMStore {
 
   setConfig(config: Partial<IMGatewayConfig>): void {
     if (config.dingtalk) {
-      this.setDingTalkConfig(config.dingtalk);
+      this.setDingTalkOpenClawConfig(config.dingtalk);
     }
     if (config.feishu) {
       this.setFeishuOpenClawConfig(config.feishu);
@@ -322,16 +379,16 @@ export class IMStore {
     }
   }
 
-  // ==================== DingTalk Config ====================
+  // ==================== DingTalk OpenClaw Config ====================
 
-  getDingTalkConfig(): DingTalkConfig {
-    const stored = this.getConfigValue<DingTalkConfig>('dingtalk');
-    return { ...DEFAULT_DINGTALK_CONFIG, ...stored };
+  getDingTalkOpenClawConfig(): DingTalkOpenClawConfig {
+    const stored = this.getConfigValue<DingTalkOpenClawConfig>('dingtalkOpenClaw');
+    return { ...DEFAULT_DINGTALK_OPENCLAW_CONFIG, ...stored };
   }
 
-  setDingTalkConfig(config: Partial<DingTalkConfig>): void {
-    const current = this.getDingTalkConfig();
-    this.setConfigValue('dingtalk', { ...current, ...config });
+  setDingTalkOpenClawConfig(config: Partial<DingTalkOpenClawConfig>): void {
+    const current = this.getDingTalkOpenClawConfig();
+    this.setConfigValue('dingtalkOpenClaw', { ...current, ...config });
   }
 
   // ==================== Feishu OpenClaw Config ====================
@@ -406,16 +463,16 @@ export class IMStore {
     this.setConfigValue('qq', { ...current, ...config });
   }
 
-  // ==================== WeCom Config ====================
+  // ==================== WeCom OpenClaw Config ====================
 
-  getWecomConfig(): WecomConfig {
-    const stored = this.getConfigValue<WecomConfig>('wecom');
+  getWecomConfig(): WecomOpenClawConfig {
+    const stored = this.getConfigValue<WecomOpenClawConfig>('wecomOpenClaw');
     return { ...DEFAULT_WECOM_CONFIG, ...stored };
   }
 
-  setWecomConfig(config: Partial<WecomConfig>): void {
+  setWecomConfig(config: Partial<WecomOpenClawConfig>): void {
     const current = this.getWecomConfig();
-    this.setConfigValue('wecom', { ...current, ...config });
+    this.setConfigValue('wecomOpenClaw', { ...current, ...config });
   }
 
   // ==================== IM Settings ====================

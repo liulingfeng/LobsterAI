@@ -6,7 +6,7 @@
     "email": "lobsterai.project@rd.netease.com"
   },
   "license": "MIT",
-  "version": "0.2.3-beta.4",
+  "version": "0.2.3",
   "openclaw": {
     "version": "v2026.3.2",
     "repo": "https://github.com/openclaw/openclaw.git",
@@ -56,8 +56,8 @@
     "dist": "npm run setup:mingit && npm run setup:python-runtime && npm run build && npm run compile:electron && npm run build:skills && electron-builder",
     "dist:mac": "node -r dotenv/config node_modules/.bin/electron-builder --mac --config electron-builder.json",
     "predist:mac": "npm run build && npm run compile:electron && npm run build:skills && npm run openclaw:runtime:mac-arm64",
-    "dist:mac:x64": "npm run build && npm run compile:electron && npm run build:skills && electron-builder --mac --x64",
-    "dist:mac:arm64": "npm run build && npm run compile:electron && npm run build:skills && electron-builder --mac --arm64",
+    "dist:mac:x64": "npm run build && npm run compile:electron && npm run build:skills && npm run openclaw:runtime:mac-x64 && electron-builder --mac --x64",
+    "dist:mac:arm64": "npm run build && npm run compile:electron && npm run build:skills && npm run openclaw:runtime:mac-arm64 && electron-builder --mac --arm64",
     "dist:mac:universal": "npm run build && npm run compile:electron && npm run build:skills && electron-builder --mac --universal",
     "predist:win": "npm run openclaw:runtime:win-x64",
     "dist:win": "npm run setup:mingit && npm run setup:python-runtime && npm run build && npm run compile:electron && npm run build:skills && electron-builder --win --x64",
@@ -93,10 +93,8 @@
     "@larksuiteoapi/node-sdk": "^1.58.0",
     "@reduxjs/toolkit": "^2.2.1",
     "@types/uuid": "^10.0.0",
-    "@wecom/aibot-node-sdk": "^1.0.0",
     "bufferutil": "^4.1.0",
     "cron-parser": "^5.5.0",
-    "dingtalk-stream": "^2.1.4",
     "dompurify": "^3.3.1",
     "electron-log": "^5.4.3",
     "extract-zip": "^2.0.1",
@@ -106,7 +104,6 @@
     "mermaid": "^10.9.5",
     "nim-web-sdk-ng": "10.9.77-alpha.4",
     "npm": "^11.11.0",
-    "qq-official-bot": "^1.0.12",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-markdown": "^10.0.0",
@@ -120,6 +117,11 @@
     "uuid": "^11.1.0",
     "yazl": "^3.3.1",
     "zod": "^4.3.6"
+  },
+  "overrides": {
+    "@electron/osx-sign": {
+      "isbinaryfile": "^5.0.0"
+    }
   },
   "devDependencies": {
     "@tailwindcss/typography": "^0.5.16",

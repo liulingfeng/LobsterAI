@@ -16,6 +16,10 @@ const CHANNEL_PLATFORM_MAP: Record<string, IMPlatform> = {
   telegram: 'telegram',
   discord: 'discord',
   feishu: 'feishu',
+  'dingtalk-connector': 'dingtalk',
+  qqbot: 'qq',
+  wecom: 'wecom',
+  'wecom-openclaw-plugin': 'wecom',
 };
 
 /** Parse a channel sessionKey into platform + conversationId.
@@ -27,14 +31,26 @@ function parseChannelSessionKey(sessionKey: string): { platform: IMPlatform; con
   if (!sessionKey || sessionKey.startsWith(LOBSTERAI_SESSION_PREFIX)) return null;
 
   // Handle OpenClaw format: agent:{agentId}:{platform}:{subtype}:{conversationId}
+  // For HTTP-originating sessions (e.g. DingTalk plugin), the format is:
+  //   agent:{agentId}:openai-user:{channel}:{conversationId}
+  // where parts[2] is "openai-user" and the actual channel name is in parts[3].
   if (sessionKey.startsWith('agent:')) {
     const parts = sessionKey.split(':');
     // Need at least: agent, agentId, platform, and one more segment
     if (parts.length >= 4) {
-      const platform = CHANNEL_PLATFORM_MAP[parts[2]];
+      let platform = CHANNEL_PLATFORM_MAP[parts[2]];
       if (platform) {
         const conversationId = parts.slice(3).join(':');
         if (conversationId) return { platform, conversationId };
+      }
+      // Fallback: parts[2] may be a session subtype (e.g. "openai-user");
+      // check parts[3] for the actual channel name.
+      if (!platform && parts.length >= 5) {
+        platform = CHANNEL_PLATFORM_MAP[parts[3]];
+        if (platform) {
+          const conversationId = parts.slice(4).join(':');
+          if (conversationId) return { platform, conversationId };
+        }
       }
     }
     return null;
@@ -62,6 +78,10 @@ const CHANNEL_TITLE_PREFIX: Record<string, string> = {
   telegram: '[TG]',
   discord: '[Discord]',
   feishu: '[飞书]',
+  'dingtalk-connector': '[钉钉]',
+  qqbot: '[QQ]',
+  wecom: '[企微]',
+  'wecom-openclaw-plugin': '[企微]',
 };
 
 export interface ChannelSessionSyncDeps {

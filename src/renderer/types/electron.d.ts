@@ -371,6 +371,7 @@ interface IElectronAPI {
   dialog: {
     selectDirectory: () => Promise<{ success: boolean; path: string | null }>;
     selectFile: (options?: { title?: string; filters?: { name: string; extensions: string[] }[] }) => Promise<{ success: boolean; path: string | null }>;
+    selectFiles: (options?: { title?: string; filters?: { name: string; extensions: string[] }[] }) => Promise<{ success: boolean; paths: string[] }>;
     saveInlineFile: (options: { dataBase64: string; fileName?: string; mimeType?: string; cwd?: string }) => Promise<{ success: boolean; path: string | null; error?: string }>;
     readFileAsDataUrl: (filePath: string) => Promise<{ success: boolean; dataUrl?: string; error?: string }>;
   };
@@ -451,7 +452,7 @@ interface IElectronAPI {
 
 // IM Gateway types
 interface IMGatewayConfig {
-  dingtalk: DingTalkConfig;
+  dingtalk: DingTalkOpenClawConfig;
   feishu: FeishuOpenClawConfig;
   telegram: TelegramOpenClawConfig;
   qq: QQConfig;
@@ -462,16 +463,15 @@ interface IMGatewayConfig {
   settings: IMSettings;
 }
 
-interface DingTalkConfig {
+interface DingTalkOpenClawConfig {
   enabled: boolean;
   clientId: string;
   clientSecret: string;
-  robotCode?: string;
-  corpId?: string;
-  agentId?: string;
-  messageType: 'markdown' | 'card';
-  cardTemplateId?: string;
-  debug?: boolean;
+  dmPolicy: 'open' | 'pairing' | 'allowlist';
+  allowFrom: string[];
+  groupPolicy: 'open' | 'allowlist';
+  sessionTimeout: number;
+  debug: boolean;
 }
 
 interface FeishuOpenClawGroupConfig {
@@ -568,14 +568,26 @@ interface QQConfig {
   enabled: boolean;
   appId: string;
   appSecret: string;
-  debug?: boolean;
+  dmPolicy: 'open' | 'pairing' | 'allowlist';
+  allowFrom: string[];
+  groupPolicy: 'open' | 'allowlist' | 'disabled';
+  groupAllowFrom: string[];
+  historyLimit: number;
+  markdownSupport: boolean;
+  imageServerBaseUrl: string;
+  debug: boolean;
 }
 
 interface WecomConfig {
   enabled: boolean;
   botId: string;
   secret: string;
-  debug?: boolean;
+  dmPolicy: 'open' | 'pairing' | 'allowlist' | 'disabled';
+  allowFrom: string[];
+  groupPolicy: 'open' | 'allowlist' | 'disabled';
+  groupAllowFrom: string[];
+  sendThinkingMessage: boolean;
+  debug: boolean;
 }
 
 interface IMSettings {

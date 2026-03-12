@@ -5,16 +5,15 @@
 
 // ==================== DingTalk Types ====================
 
-export interface DingTalkConfig {
+export interface DingTalkOpenClawConfig {
   enabled: boolean;
   clientId: string;
   clientSecret: string;
-  robotCode?: string;
-  corpId?: string;
-  agentId?: string;
-  messageType: 'markdown' | 'card';
-  cardTemplateId?: string;
-  debug?: boolean;
+  dmPolicy: 'open' | 'pairing' | 'allowlist';
+  allowFrom: string[];
+  groupPolicy: 'open' | 'allowlist';
+  sessionTimeout: number;
+  debug: boolean;
 }
 
 export interface DingTalkGatewayStatus {
@@ -177,12 +176,22 @@ export interface XiaomifengGatewayStatus {
 
 // ==================== QQ Types ====================
 
-export interface QQConfig {
+export interface QQOpenClawConfig {
   enabled: boolean;
   appId: string;
   appSecret: string;
-  debug?: boolean;
+  dmPolicy: 'open' | 'pairing' | 'allowlist';
+  allowFrom: string[];
+  groupPolicy: 'open' | 'allowlist' | 'disabled';
+  groupAllowFrom: string[];
+  historyLimit: number;
+  markdownSupport: boolean;
+  imageServerBaseUrl: string;
+  debug: boolean;
 }
+
+/** @deprecated Use QQOpenClawConfig instead */
+export type QQConfig = QQOpenClawConfig;
 
 export interface QQGatewayStatus {
   connected: boolean;
@@ -194,12 +203,20 @@ export interface QQGatewayStatus {
 
 // ==================== WeCom (企业微信) Types ====================
 
-export interface WecomConfig {
+export interface WecomOpenClawConfig {
   enabled: boolean;
   botId: string;
   secret: string;
-  debug?: boolean;
+  dmPolicy: 'open' | 'pairing' | 'allowlist' | 'disabled';
+  allowFrom: string[];
+  groupPolicy: 'open' | 'allowlist' | 'disabled';
+  groupAllowFrom: string[];
+  sendThinkingMessage: boolean;
+  debug: boolean;
 }
+
+/** @deprecated Use WecomOpenClawConfig instead */
+export type WecomConfig = WecomOpenClawConfig;
 
 export interface WecomGatewayStatus {
   connected: boolean;
@@ -215,14 +232,14 @@ export interface WecomGatewayStatus {
 export type IMPlatform = 'dingtalk' | 'feishu' | 'qq' | 'telegram' | 'discord' | 'nim' | 'xiaomifeng' | 'wecom';
 
 export interface IMGatewayConfig {
-  dingtalk: DingTalkConfig;
+  dingtalk: DingTalkOpenClawConfig;
   feishu: FeishuOpenClawConfig;
   telegram: TelegramOpenClawConfig;
-  qq: QQConfig;
+  qq: QQOpenClawConfig;
   discord: DiscordOpenClawConfig;
   nim: NimConfig;
   xiaomifeng: XiaomifengConfig;
-  wecom: WecomConfig;
+  wecom: WecomOpenClawConfig;
   settings: IMSettings;
 }
 
@@ -350,12 +367,15 @@ export interface PairingListResult {
 
 // ==================== Default Configurations ====================
 
-export const DEFAULT_DINGTALK_CONFIG: DingTalkConfig = {
+export const DEFAULT_DINGTALK_OPENCLAW_CONFIG: DingTalkOpenClawConfig = {
   enabled: false,
   clientId: '',
   clientSecret: '',
-  messageType: 'markdown',
-  debug: true,
+  dmPolicy: 'open',
+  allowFrom: [],
+  groupPolicy: 'open',
+  sessionTimeout: 1800000,
+  debug: false,
 };
 
 export const DEFAULT_FEISHU_OPENCLAW_CONFIG: FeishuOpenClawConfig = {
@@ -363,7 +383,7 @@ export const DEFAULT_FEISHU_OPENCLAW_CONFIG: FeishuOpenClawConfig = {
   appId: '',
   appSecret: '',
   domain: 'feishu',
-  dmPolicy: 'pairing',
+  dmPolicy: 'open',
   allowFrom: [],
   groupPolicy: 'allowlist',
   groupAllowFrom: [],
@@ -377,7 +397,7 @@ export const DEFAULT_FEISHU_OPENCLAW_CONFIG: FeishuOpenClawConfig = {
 export const DEFAULT_DISCORD_OPENCLAW_CONFIG: DiscordOpenClawConfig = {
   enabled: false,
   botToken: '',
-  dmPolicy: 'pairing',
+  dmPolicy: 'open',
   allowFrom: [],
   groupPolicy: 'allowlist',
   groupAllowFrom: [],
@@ -408,7 +428,7 @@ export const DEFAULT_XIAOMIFENG_CONFIG: XiaomifengConfig = {
 export const DEFAULT_TELEGRAM_OPENCLAW_CONFIG: TelegramOpenClawConfig = {
   enabled: false,
   botToken: '',
-  dmPolicy: 'pairing',
+  dmPolicy: 'open',
   allowFrom: [],
   groupPolicy: 'allowlist',
   groupAllowFrom: [],
@@ -424,17 +444,29 @@ export const DEFAULT_TELEGRAM_OPENCLAW_CONFIG: TelegramOpenClawConfig = {
   debug: false,
 };
 
-export const DEFAULT_QQ_CONFIG: QQConfig = {
+export const DEFAULT_QQ_CONFIG: QQOpenClawConfig = {
   enabled: false,
   appId: '',
   appSecret: '',
-  debug: true,
+  dmPolicy: 'open',
+  allowFrom: [],
+  groupPolicy: 'open',
+  groupAllowFrom: [],
+  historyLimit: 50,
+  markdownSupport: true,
+  imageServerBaseUrl: '',
+  debug: false,
 };
 
-export const DEFAULT_WECOM_CONFIG: WecomConfig = {
+export const DEFAULT_WECOM_CONFIG: WecomOpenClawConfig = {
   enabled: false,
   botId: '',
   secret: '',
+  dmPolicy: 'open',
+  allowFrom: [],
+  groupPolicy: 'open',
+  groupAllowFrom: [],
+  sendThinkingMessage: true,
   debug: true,
 };
 
@@ -444,7 +476,7 @@ export const DEFAULT_IM_SETTINGS: IMSettings = {
 };
 
 export const DEFAULT_IM_CONFIG: IMGatewayConfig = {
-  dingtalk: DEFAULT_DINGTALK_CONFIG,
+  dingtalk: DEFAULT_DINGTALK_OPENCLAW_CONFIG,
   feishu: DEFAULT_FEISHU_OPENCLAW_CONFIG,
   telegram: DEFAULT_TELEGRAM_OPENCLAW_CONFIG,
   qq: DEFAULT_QQ_CONFIG,
