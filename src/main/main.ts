@@ -25,7 +25,6 @@ import {
   rejectPairingRequest,
   readAllowFromStore,
 } from './im/imPairingStore';
-import { fetchWeixinQrCode, pollWeixinQrStatus } from './im/weixinLogin';
 import { OpenClawConfigSync } from './libs/openclawConfigSync';
 import {
   resolveMemoryFilePath,
@@ -2960,30 +2959,28 @@ if (!gotTheLock) {
     }
   });
 
-  // Weixin QR login (direct ilink API, no OpenClaw Gateway dependency)
-  ipcMain.handle('im:weixin:login:start', async () => {
+  // Weixin QR login
+  ipcMain.handle('im:weixin:qr-login-start', async () => {
     try {
-      const result = await fetchWeixinQrCode();
-      return { success: true, qrcode: result.qrcode, qrcodeUrl: result.qrcodeUrl };
+      const result = await getIMGatewayManager().weixinQrLoginStart();
+      return { success: true, ...result };
     } catch (error) {
-      return { success: false, message: error instanceof Error ? error.message : 'Failed to fetch WeChat QR code' };
+      return { success: false, message: error instanceof Error ? error.message : 'Failed to start Weixin QR login' };
     }
   });
 
-  ipcMain.handle('im:weixin:login:poll', async (_event, qrcode: string) => {
+  ipcMain.handle('im:weixin:qr-login-wait', async (_event, accountId?: string) => {
     try {
-      const result = await pollWeixinQrStatus(qrcode);
-      if (result.status === 'confirmed') {
+      const result = await getIMGatewayManager().weixinQrLoginWait(accountId);
+      if (result.connected) {
         // Restart gateway so the plugin picks up the new token and starts
         // a fresh monitor loop (the old one may be stuck in a session pause).
-        console.log('[WeixinLogin] login confirmed, restarting OpenClaw gateway');
-        getOpenClawEngineManager().restartGateway().catch((err: unknown) => {
-          console.error('[WeixinLogin] failed to restart gateway after login:', err);
-        });
+        console.log('[IMGatewayManager] Weixin login succeeded, restarting OpenClaw gateway');
+        await getOpenClawEngineManager().restartGateway();
       }
       return { success: true, ...result };
     } catch (error) {
-      return { success: false, status: 'wait' as const, message: error instanceof Error ? error.message : 'Failed to poll QR status' };
+      return { success: false, connected: false, message: error instanceof Error ? error.message : 'Weixin QR login failed' };
     }
   });
 
