@@ -1,5 +1,6 @@
 import React from 'react';
-import { XMarkIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon } from '@heroicons/react/24/outline';
+import { InformationCircleIcon } from '@heroicons/react/20/solid';
 
 interface ToastProps {
   message: string;
@@ -9,12 +10,12 @@ interface ToastProps {
 const Toast: React.FC<ToastProps> = ({ message, onClose }) => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center modal-backdrop">
-      <div className="w-full max-w-md mx-4 rounded-2xl border border-border/60 bg-surface/95 text-foreground px-6 py-4 shadow-xl backdrop-blur-md animate-scale-in">
-        <div className="flex items-start gap-4">
-          <div className="shrink-0 rounded-full bg-primary/10 p-2.5">
-            <InformationCircleIcon className="h-5 w-5 text-primary" />
+      <div className="w-full max-w-md mx-4 rounded-2xl border border-border-subtle bg-surface text-foreground px-5 py-3.5 shadow-xl backdrop-blur-md animate-scale-in">
+        <div className="flex items-center gap-3">
+          <div className="shrink-0 rounded-full bg-primary-muted p-2">
+            <InformationCircleIcon className="h-4 w-4 text-primary" />
           </div>
-          <div className="flex-1 text-base font-medium leading-snug">
+          <div className="flex-1 text-sm font-medium leading-snug">
             {message}
           </div>
           {onClose && (
