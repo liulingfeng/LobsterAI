@@ -321,6 +321,24 @@ const SkillsManager: React.FC<SkillsManagerProps> = ({ readOnly, onCreateByChat 
 
   const handleCreateByChat = () => {
     setIsAddSkillMenuOpen(false);
+    const skillCreator = skills.find(s => s.id === 'skill-creator');
+
+    if (!skillCreator) {
+      // Not installed → switch to marketplace tab and search
+      setActiveTab('marketplace');
+      setSkillSearchQuery('skill-creator');
+      window.dispatchEvent(new CustomEvent('app:showToast', { detail: i18nService.t('skillCreatorNotInstalled') }));
+      return;
+    }
+
+    if (!skillCreator.enabled) {
+      // Installed but disabled → switch to installed tab and search
+      setActiveTab('installed');
+      setSkillSearchQuery('skill-creator');
+      window.dispatchEvent(new CustomEvent('app:showToast', { detail: i18nService.t('skillCreatorNotEnabled') }));
+      return;
+    }
+
     onCreateByChat?.();
   };
 

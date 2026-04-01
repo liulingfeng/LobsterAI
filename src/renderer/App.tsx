@@ -299,7 +299,7 @@ const App: React.FC = () => {
   }, [dispatch, mainView, currentSessionId]);
 
   const handleCreateSkillByChat = useCallback(() => {
-    dispatch(setDraftPrompt({ sessionId: '__home__', draft: '使用你的skill-creator技能，来创建一个技能。首先，请询问我这个技能需要干什么。' }));
+    dispatch(setDraftPrompt({ sessionId: '__home__', draft: i18nService.t('skillCreatorPrompt') }));
     coworkService.clearSession();
     dispatch(clearSelection());
     setMainView('cowork');
